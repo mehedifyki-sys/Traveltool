@@ -1,180 +1,492 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<title>Travel Agent AI Flight Tool V2</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8">
+<title>Free Travel Agent OCR Flight Tool</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
 <style>
-body{margin:0;font-family:Segoe UI,Arial;background:#07101d;color:#f5f7fb}
-header{padding:24px;background:#102b46}
-.container{padding:24px;max-width:1400px;margin:auto}
-.grid{display:grid;grid-template-columns:380px 1fr;gap:20px}
-.card{background:#101c2e;border-radius:18px;padding:20px;border:1px solid #26384f}
-button{width:100%;padding:14px;border:0;border-radius:12px;margin-top:10px;font-weight:700;color:white;background:#087cff;cursor:pointer}
+body{
+  margin:0;
+  font-family:Segoe UI,Arial,sans-serif;
+  background:#07101d;
+  color:#f4f7fb;
+}
+header{
+  padding:24px;
+  background:#123456;
+}
+header h1{margin:0;font-size:32px}
+header p{margin-top:10px;color:#c9d8ea}
+.container{padding:24px;max-width:1500px;margin:auto}
+.grid{
+  display:grid;
+  grid-template-columns:420px 1fr;
+  gap:22px;
+}
+.card{
+  background:#101c2e;
+  border:1px solid #2b405c;
+  border-radius:18px;
+  padding:20px;
+}
+input,textarea,button{
+  width:100%;
+  box-sizing:border-box;
+  padding:13px;
+  border-radius:12px;
+  border:1px solid #2f4563;
+  background:#07101d;
+  color:white;
+  margin-top:10px;
+}
+textarea{
+  min-height:230px;
+  resize:vertical;
+}
+button{
+  border:0;
+  font-weight:700;
+  cursor:pointer;
+  background:#087cff;
+}
+button.orange{background:#ff6500}
 button.green{background:#00b894}
-textarea,input{width:100%;padding:12px;border-radius:10px;background:#07101d;color:white;border:1px solid #31445e;margin-top:8px}
-.preview{max-width:100%;border-radius:12px;margin-top:12px}
-.option{background:#07101d;border:1px solid #31445e;border-radius:16px;padding:16px;margin-bottom:16px}
-.best{border:2px solid #00d084}
-.copybox{white-space:pre-wrap;background:#0b1728;padding:14px;border-radius:12px}
-.small{color:#b8c7d9;font-size:13px}
-@media(max-width:900px){.grid{grid-template-columns:1fr}}
+button.gray{background:#35475f}
+.preview{
+  width:100%;
+  margin-top:14px;
+  border-radius:12px;
+  border:1px solid #2f4563;
+}
+.paste-box{
+  border:2px dashed #4c6688;
+  padding:18px;
+  border-radius:12px;
+  text-align:center;
+  margin-top:12px;
+}
+.option{
+  background:#07101d;
+  border:1px solid #2f4563;
+  border-radius:16px;
+  padding:16px;
+  margin-bottom:16px;
+}
+.best{
+  border:2px solid #00d084;
+}
+.copybox{
+  background:#0b1728;
+  border-radius:12px;
+  padding:14px;
+  white-space:pre-wrap;
+  line-height:1.5;
+}
+.small{font-size:13px;color:#b8c7d9}
+.badge{
+  display:inline-block;
+  padding:5px 10px;
+  background:#123456;
+  border-radius:999px;
+  color:#9ed8ff;
+  font-size:12px;
+}
+@media(max-width:900px){
+  .grid{grid-template-columns:1fr}
+}
 </style>
 </head>
+
 <body>
 
 <header>
-  <h1>Travel Agent AI Flight Itinerary & Script Generator V2</h1>
-  <p>Paste or upload a flight screenshot and generate client-ready itinerary scripts.</p>
+  <h1>Free Travel Agent Flight Itinerary & Script Generator</h1>
+  <p>Upload or paste a flight screenshot, extract details with OCR, correct if needed, and generate client-ready scripts.</p>
 </header>
 
 <div class="container">
   <div class="grid">
+
     <div class="card">
       <h2>Screenshot Input</h2>
+
       <input type="file" id="fileInput" accept="image/*">
-      <p class="small">Or copy screenshot and press <b>CTRL + V</b> here.</p>
-      <div id="pasteBox" style="border:2px dashed #3c526f;padding:18px;border-radius:12px;text-align:center">
-        Paste screenshot here
+
+      <div class="paste-box">
+        Copy screenshot and press <b>CTRL + V</b> here
       </div>
+
       <img id="preview" class="preview" style="display:none">
 
+      <button onclick="runOCR()">Extract Text from Screenshot</button>
+      <button class="orange" onclick="createItinerary()">Create Itinerary</button>
+      <button class="green" onclick="findBestOption()">Find Best Option</button>
+
       <h3>Trip Context</h3>
-      <input id="origin" placeholder="Origin city e.g. New York">
-      <input id="destination" placeholder="Destination city e.g. Los Angeles">
+      <input id="originCity" placeholder="Origin city e.g. New York">
+      <input id="destinationCity" placeholder="Destination city e.g. Los Angeles">
       <input id="departureDate" placeholder="Departure date e.g. 15 June">
       <input id="returnDate" placeholder="Return date e.g. 22 June">
       <input id="travellers" placeholder="Travellers e.g. 2">
-      <input id="cabin" placeholder="Cabin e.g. Economy">
+      <input id="cabin" placeholder="Cabin/Fare e.g. Economy / Delta Main Basic">
 
-      <button onclick="analyzeImage()">Analyze Screenshot with AI</button>
-      <button class="green" onclick="copyBestScript()">Copy Best Option Script</button>
+      <h3>Baggage Notes</h3>
+      <textarea id="baggageNotes" placeholder="Example: Checked baggage allowance is not visible. Please verify before ticketing."></textarea>
     </div>
 
     <div class="card">
-      <h2>AI Result</h2>
-      <div id="status" class="small">Waiting for screenshot...</div>
-      <div id="results"></div>
+      <h2>OCR Text / Manual Correction</h2>
+      <p class="small">After OCR, check this text. Correct airline, time, price, duration if OCR reads wrongly.</p>
+      <textarea id="ocrText" placeholder="OCR result will appear here. You can also paste flight text manually."></textarea>
+
+      <h3>Manual Input Example</h3>
+      <div class="copybox small">
+Delta 08:00 - 11:00 JFK to LAX direct 6h 00m price $327
+Delta 15:15 - 23:47 LAX to JFK direct 5h 32m
+Delta Main Basic
+      </div>
     </div>
+
+  </div>
+
+  <br>
+
+  <div class="card">
+    <h2>Generated Result</h2>
+    <div id="summary" class="small">No itinerary generated yet.</div>
+    <div id="results"></div>
   </div>
 </div>
 
 <script>
-let imageBase64 = "";
-let finalData = null;
+let uploadedImage = null;
+let flightOptions = [];
 
-const fileInput = document.getElementById("fileInput");
-const preview = document.getElementById("preview");
+const airlineList = [
+  "Delta", "American", "United", "Emirates", "Qatar", "Turkish",
+  "Etihad", "Saudia", "British Airways", "Lufthansa", "Air Canada",
+  "Singapore Airlines", "Thai Airways", "IndiGo", "Vistara",
+  "Air India", "Biman", "Cathay Pacific", "KLM", "Air France"
+];
 
-fileInput.addEventListener("change", async e => {
+document.getElementById("fileInput").addEventListener("change", function(e){
   const file = e.target.files[0];
-  if (!file) return;
-  await loadImage(file);
+  if(file) loadImage(file);
 });
 
-document.addEventListener("paste", async e => {
+document.addEventListener("paste", function(e){
   const items = e.clipboardData.items;
-  for (const item of items) {
-    if (item.type.startsWith("image/")) {
-      const file = item.getAsFile();
-      await loadImage(file);
+  for(let i=0;i<items.length;i++){
+    if(items[i].type.indexOf("image") !== -1){
+      const file = items[i].getAsFile();
+      loadImage(file);
+      document.getElementById("ocrText").value = "Screenshot pasted. Click Extract Text from Screenshot.";
       break;
     }
   }
 });
 
-async function loadImage(file){
-  const reader = new FileReader();
-  reader.onload = () => {
-    imageBase64 = reader.result;
-    preview.src = imageBase64;
-    preview.style.display = "block";
-    document.getElementById("status").innerText = "Screenshot loaded. Ready to analyze.";
-  };
-  reader.readAsDataURL(file);
+function loadImage(file){
+  uploadedImage = file;
+  const url = URL.createObjectURL(file);
+  const preview = document.getElementById("preview");
+  preview.src = url;
+  preview.style.display = "block";
 }
 
-async function analyzeImage(){
-  if(!imageBase64){
+async function runOCR(){
+  if(!uploadedImage){
     alert("Please upload or paste a screenshot first.");
     return;
   }
 
-  document.getElementById("status").innerText = "AI is analyzing screenshot...";
+  const box = document.getElementById("ocrText");
+  box.value = "Reading screenshot... please wait.";
 
-  const payload = {
-    image: imageBase64,
-    context: {
-      origin: document.getElementById("origin").value,
-      destination: document.getElementById("destination").value,
-      departureDate: document.getElementById("departureDate").value,
-      returnDate: document.getElementById("returnDate").value,
-      travellers: document.getElementById("travellers").value,
-      cabin: document.getElementById("cabin").value
+  const result = await Tesseract.recognize(uploadedImage, "eng", {
+    logger: m => {
+      if(m.status){
+        box.value = "OCR Status: " + m.status + " " + Math.round((m.progress || 0) * 100) + "%";
+      }
     }
-  };
-
-  const res = await fetch("/api/analyze", {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify(payload)
   });
 
-  if(!res.ok){
-    document.getElementById("status").innerText = "Error analyzing screenshot.";
+  box.value = cleanOCR(result.data.text);
+}
+
+function cleanOCR(text){
+  return text
+    .replace(/[–—]/g,"-")
+    .replace(/\s+/g," ")
+    .replace(/(\d{1,2})\s*:\s*(\d{2})/g,"$1:$2")
+    .replace(/\$\s+/g,"$")
+    .trim();
+}
+
+function detectAirline(text){
+  const lower = text.toLowerCase();
+  for(const airline of airlineList){
+    if(lower.includes(airline.toLowerCase())) return airline;
+  }
+  return "Airline not clearly detected";
+}
+
+function extractTimes(text){
+  const regex = /(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})(\+1)?/g;
+  return [...text.matchAll(regex)].map(m => ({
+    depart:m[1],
+    arrive:m[2],
+    nextDay:!!m[3]
+  }));
+}
+
+function extractDurations(text){
+  const regex = /(\d{1,2})\s*h\s*(\d{1,2})\s*m/gi;
+  return [...text.matchAll(regex)].map(m => ({
+    raw:`${m[1]}h ${m[2]}m`,
+    minutes:Number(m[1])*60 + Number(m[2])
+  }));
+}
+
+function extractPrices(text){
+  return [...text.matchAll(/\$\s?(\d{2,5})/g)]
+    .map(m => Number(m[1]))
+    .filter(n => n > 20);
+}
+
+function extractAirportCodes(text){
+  const codes = [...text.matchAll(/\b[A-Z]{3}\b/g)].map(m => m[0]);
+  return [...new Set(codes)];
+}
+
+function detectStops(text){
+  const lower = text.toLowerCase();
+  if(lower.includes("direct") || lower.includes("nonstop") || lower.includes("non-stop")){
+    return "Direct";
+  }
+  if(lower.includes("1 stop")) return "1 stop";
+  if(lower.includes("2 stops")) return "2 stops";
+  return "Not clearly detected";
+}
+
+function detectLayover(text){
+  const stops = detectStops(text);
+  if(stops === "Direct") return "No layover. This is a direct flight.";
+  const match = text.match(/layover\s*(?:in)?\s*([A-Za-z\s]+)?\s*(\d{1,2})\s*h\s*(\d{1,2})?\s*m?/i);
+  if(match){
+    return `Layover detected${match[1] ? " in " + match[1].trim() : ""}, approximately ${match[2]} hours ${match[3] || "0"} minutes.`;
+  }
+  return "Layover details not clearly detected. Please verify before ticketing.";
+}
+
+function minutesToText(min){
+  if(!min) return "Not detected";
+  const h = Math.floor(min/60);
+  const m = min % 60;
+  return `${h} hours and ${m} minutes`;
+}
+
+function createItinerary(){
+  const text = cleanOCR(document.getElementById("ocrText").value);
+  if(!text){
+    alert("Please extract or paste flight details first.");
     return;
   }
 
-  finalData = await res.json();
-  renderResults(finalData);
+  const airline = detectAirline(text);
+  const times = extractTimes(text);
+  const durations = extractDurations(text);
+  const prices = extractPrices(text);
+  const codes = extractAirportCodes(text);
+
+  const originCity = document.getElementById("originCity").value || "Origin city";
+  const destinationCity = document.getElementById("destinationCity").value || "Destination city";
+  const departureDate = document.getElementById("departureDate").value || "departure date";
+  const returnDate = document.getElementById("returnDate").value || "return date";
+  const travellers = Number(document.getElementById("travellers").value || 1);
+  const cabin = document.getElementById("cabin").value || "Cabin/fare not clearly detected";
+  const baggage = document.getElementById("baggageNotes").value || "Baggage allowance is not visible in the screenshot and must be verified before ticketing.";
+
+  const optionCount = Math.max(1, Math.floor(times.length / 2));
+  flightOptions = [];
+
+  for(let i=0;i<optionCount;i++){
+    const outboundTime = times[i*2] || {};
+    const inboundTime = times[i*2+1] || times[1] || {};
+    const outboundDur = durations[i*2] || {};
+    const inboundDur = durations[i*2+1] || durations[1] || {};
+    const price = prices[i] || prices[0] || null;
+
+    const option = {
+      optionNo:i+1,
+      airline,
+      cabin,
+      price,
+      totalPrice:price ? price * travellers : null,
+      travellers,
+      originCity,
+      destinationCity,
+      departureDate,
+      returnDate,
+      outbound:{
+        from:codes[0] || "Origin Airport",
+        to:codes[1] || "Destination Airport",
+        depart:outboundTime.depart || "Not detected",
+        arrive:outboundTime.arrive || "Not detected",
+        nextDay:outboundTime.nextDay || false,
+        duration:outboundDur.raw || "Not detected",
+        minutes:outboundDur.minutes || 0,
+        stops:detectStops(text),
+        layover:detectLayover(text)
+      },
+      inbound:{
+        from:codes[1] || "Destination Airport",
+        to:codes[0] || "Origin Airport",
+        depart:inboundTime.depart || "Not detected",
+        arrive:inboundTime.arrive || "Not detected",
+        nextDay:inboundTime.nextDay || false,
+        duration:inboundDur.raw || "Not detected",
+        minutes:inboundDur.minutes || 0,
+        stops:detectStops(text),
+        layover:detectLayover(text)
+      },
+      baggage,
+      totalMinutes:(outboundDur.minutes || 0) + (inboundDur.minutes || 0)
+    };
+
+    flightOptions.push(option);
+  }
+
+  renderOptions();
 }
 
-function renderResults(data){
-  document.getElementById("status").innerText = "Analysis complete. Please verify before ticketing.";
+function generateItineraryText(o){
+  return `OPTION ${o.optionNo} ITINERARY
+
+Airline: ${o.airline}
+Cabin/Fare: ${o.cabin}
+Price: ${o.price ? "$" + o.price + " per person" : "Not detected"}
+Total Price: ${o.totalPrice ? "$" + o.totalPrice + " for " + o.travellers + " traveller(s)" : "Not detected"}
+
+Outbound Flight:
+${o.originCity} (${o.outbound.from}) to ${o.destinationCity} (${o.outbound.to})
+Date: ${o.departureDate}
+Departure: ${o.outbound.depart}
+Arrival: ${o.outbound.arrive}${o.outbound.nextDay ? " next day" : ""}
+Duration: ${o.outbound.duration}
+Stops/Layover: ${o.outbound.layover}
+
+Inbound Flight:
+${o.destinationCity} (${o.inbound.from}) to ${o.originCity} (${o.inbound.to})
+Date: ${o.returnDate}
+Departure: ${o.inbound.depart}
+Arrival: ${o.inbound.arrive}${o.inbound.nextDay ? " next day" : ""}
+Duration: ${o.inbound.duration}
+Stops/Layover: ${o.inbound.layover}
+
+Total Combined Travel Time: ${minutesToText(o.totalMinutes)}
+
+Baggage/Fare Note:
+${o.baggage}`;
+}
+
+function generateScript(o){
+  return `This is option ${o.optionNo} with ${o.airline}.
+
+For the outbound flight, it departs from ${o.originCity} (${o.outbound.from}) on ${o.departureDate} at ${o.outbound.depart}, and arrives in ${o.destinationCity} (${o.outbound.to}) at ${o.outbound.arrive}${o.outbound.nextDay ? " the next day" : " on the same day"}.
+
+The outbound flight duration is ${o.outbound.duration}. ${o.outbound.layover}
+
+For the return flight, it departs from ${o.destinationCity} (${o.inbound.from}) on ${o.returnDate} at ${o.inbound.depart}, and arrives back to ${o.originCity} (${o.inbound.to}) at ${o.inbound.arrive}${o.inbound.nextDay ? " the next day" : " on the same day"}.
+
+The return flight duration is ${o.inbound.duration}. ${o.inbound.layover}
+
+The total combined travel time is ${minutesToText(o.totalMinutes)}.
+
+The fare is ${o.price ? "$" + o.price + " per person" : "not clearly detected"}${o.totalPrice ? ", and the total price for " + o.travellers + " traveller(s) is $" + o.totalPrice : ""}.
+
+Cabin or fare type: ${o.cabin}.
+
+Baggage information: ${o.baggage}
+
+Before ticketing, I recommend verifying baggage allowance, fare rules, seat selection, cancellation policy, and whether this fare is basic economy or standard economy.`;
+}
+
+function renderOptions(bestIndex=null){
   const results = document.getElementById("results");
   results.innerHTML = "";
 
-  if(data.best_option_summary){
-    results.innerHTML += `
-      <div class="option best">
-        <h2>Best Option Recommendation</h2>
-        <div class="copybox">${data.best_option_summary}</div>
-      </div>
+  document.getElementById("summary").innerHTML =
+    `Detected ${flightOptions.length} option(s). Please verify OCR text before sending to client.`;
+
+  flightOptions.forEach((o,i)=>{
+    const div = document.createElement("div");
+    div.className = "option" + (bestIndex === i ? " best" : "");
+    div.innerHTML = `
+      <span class="badge">Option ${o.optionNo}</span>
+      ${bestIndex === i ? '<span class="badge">Best Option</span>' : ''}
+      <h3>${o.airline}</h3>
+
+      <h4>Itinerary</h4>
+      <div class="copybox" id="itinerary-${i}">${generateItineraryText(o)}</div>
+      <button class="gray" onclick="copyText('itinerary-${i}')">Copy Itinerary</button>
+
+      <h4>Travel Agent Script</h4>
+      <div class="copybox" id="script-${i}">${generateScript(o)}</div>
+      <button onclick="copyText('script-${i}')">Copy Script</button>
     `;
-  }
-
-  data.flight_options.forEach((opt, i) => {
-    results.innerHTML += `
-      <div class="option ${opt.is_best ? "best" : ""}">
-        <h2>Option ${opt.option_number} ${opt.is_best ? "✅ Best" : ""}</h2>
-        <p><b>Airline:</b> ${opt.airline || "Not detected"}</p>
-        <p><b>Price:</b> ${opt.price_per_person || "Not detected"} | <b>Total:</b> ${opt.total_price || "Not detected"}</p>
-        <p><b>Cabin/Fare:</b> ${opt.cabin_or_fare || "Not detected"}</p>
-
-        <h3>Itinerary</h3>
-        <div class="copybox">${opt.itinerary}</div>
-
-        <h3>Travel Agent Script</h3>
-        <div class="copybox" id="script-${i}">${opt.script}</div>
-        <button onclick="copyText('script-${i}')">Copy This Script</button>
-
-        <h3>Verification Notes</h3>
-        <div class="copybox">${opt.verification_notes}</div>
-      </div>
-    `;
+    results.appendChild(div);
   });
+}
+
+function findBestOption(){
+  if(!flightOptions.length) createItinerary();
+  if(!flightOptions.length) return;
+
+  let bestIndex = 0;
+  let bestScore = Infinity;
+
+  flightOptions.forEach((o,i)=>{
+    let score = 0;
+
+    score += o.price ? o.price * 2 : 9999;
+    score += o.totalMinutes ? o.totalMinutes : 9999;
+
+    if(o.outbound.stops === "Direct") score -= 150;
+    if(o.inbound.stops === "Direct") score -= 150;
+
+    if(score < bestScore){
+      bestScore = score;
+      bestIndex = i;
+    }
+  });
+
+  renderOptions(bestIndex);
+
+  const best = flightOptions[bestIndex];
+  document.getElementById("summary").innerHTML =
+    `<div class="copybox">
+Best Recommended Option: Option ${best.optionNo}
+
+Reason:
+- Airline: ${best.airline}
+- Price: ${best.price ? "$" + best.price + " per person" : "Not detected"}
+- Total travel time: ${minutesToText(best.totalMinutes)}
+- Outbound: ${best.outbound.depart} to ${best.outbound.arrive}
+- Inbound: ${best.inbound.depart} to ${best.inbound.arrive}
+- Layover: ${best.outbound.layover}
+
+Recommendation:
+This option appears to provide the best balance of price, travel time, and convenience based on the OCR-detected information. Please verify all fare and baggage details before ticketing.
+</div>`;
 }
 
 function copyText(id){
   navigator.clipboard.writeText(document.getElementById(id).innerText);
   alert("Copied.");
-}
-
-function copyBestScript(){
-  if(!finalData) return alert("Analyze first.");
-  const best = finalData.flight_options.find(x => x.is_best) || finalData.flight_options[0];
-  navigator.clipboard.writeText(best.script);
-  alert("Best option script copied.");
 }
 </script>
 
